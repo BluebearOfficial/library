@@ -1,5 +1,5 @@
 const express = require('express');
-const fs = require('fs');
+const db = require('./db');
 const app = express();
 
 app.use(express.json());
@@ -10,75 +10,50 @@ app.use((req, res, next) => {
   next();
 });
 
-const FILE = './books.json';
-
-// 读数据
-function load() {
-  return JSON.parse(fs.readFileSync(FILE, 'utf-8'));
-}
-
-// 写数据（这一步还没用上，但先放着）
-function save(data) {
-  fs.writeFileSync(FILE, JSON.stringify(data, null, 2));
-}
-
-// ===== 查：列出所有书 =====
+// ===== 查 =====
 app.get('/api/books', (req, res) => {
-  const db = load();
-  res.json({ ok: true, books: db.books });
+  const books = db.prepare('SELECT * FROM books').all();
+  res.json({ ok: true, books });
 });
 
-
+// ===== 增 =====
 app.post('/api/books', (req, res) => {
-  const db = load();
   const { title, author } = req.body;
-
-  const newBook = {
-    id: db.books.length ? Math.max(...db.books.map(b => b.id)) + 1 : 1,
-    title,
-    author,
-    borrowed: false,
-  };
-
-  db.books.push(newBook);
-  save(db);
-
-  res.json({ ok: true, book: newBook });
+  const info = db.prepare('INSERT INTO books (title, author) VALUES (?, ?)').run(title, author);
+  const book = db.prepare('SELECT * FROM books WHERE id = ?').get(info.lastInsertRowid);
+  res.json({ ok: true, book });
 });
 
+// ===== 删 =====
 app.delete('/api/books/:id', (req, res) => {
-  const db = load();
   const id = Number(req.params.id);
-
-  const before = db.books.length;
-  db.books = db.books.filter(b => b.id !== id);
-
-  if (db.books.length === before) {
+  const info = db.prepare('DELETE FROM books WHERE id = ?').run(id);
+  if (info.changes === 0) {
     return res.json({ ok: false, msg: '没找到这本书' });
   }
-
-  save(db);
   res.json({ ok: true });
 });
 
+// ===== 改 =====
 app.put('/api/books/:id', (req, res) => {
-  const db = load();
   const id = Number(req.params.id);
-  const book = db.books.find(b => b.id === id);
-
+  const book = db.prepare('SELECT * FROM books WHERE id = ?').get(id);
   if (!book) {
     return res.json({ ok: false, msg: '没找到这本书' });
   }
 
   const { title, author, borrowed } = req.body;
-  if (title !== undefined) book.title = title;
-  if (author !== undefined) book.author = author;
-  if (borrowed !== undefined) book.borrowed = borrowed;
+  db.prepare(`
+    UPDATE books SET
+      title = COALESCE(?, title),
+      author = COALESCE(?, author),
+      borrowed = COALESCE(?, borrowed)
+    WHERE id = ?
+  `).run(title ?? null, author ?? null, borrowed ?? null, id);
 
-  save(db);
-  res.json({ ok: true, book });
+  const updated = db.prepare('SELECT * FROM books WHERE id = ?').get(id);
+  res.json({ ok: true, book: updated });
 });
-
 
 app.listen(3000, () => {
   console.log('图书馆后端跑起来了：http://localhost:3000');
