@@ -5,15 +5,18 @@
   <title>图书馆</title>
 </head>
 <body>
-  <h1>图书馆藏书</h1>
-  <ul id="list">加载中…</ul>
+  <h1>图书馆</h1>
 
-  <h2>添加书籍</h2>
-<form id="addForm">
-  <input id="title" placeholder="书名" required />
-  <input id="author" placeholder="作者" required />
-  <button type="submit">添加</button>
-</form>
+  <h2>添加书目</h2>
+  <form id="addForm">
+    <input id="isbn" placeholder="ISBN（可空）" />
+    <input id="title" placeholder="书名" required />
+    <input id="author" placeholder="作者" required />
+    <button type="submit">添加</button>
+  </form>
+
+  <h2>藏书</h2>
+  <ul id="list">加载中…</ul>
 
   <script>
 function loadBooks() {
@@ -25,32 +28,64 @@ function loadBooks() {
 
       d.books.forEach(b => {
         const li = document.createElement('li');
-        li.textContent = `${b.title} — ${b.author} ${b.borrowed ? '（已借出）' : ''}`;
-const editBtn = document.createElement('button');
-editBtn.textContent = '编辑';
-editBtn.style.marginLeft = '5px';
-editBtn.onclick = () => editBook(b);
-li.appendChild(editBtn);
-        const btn = document.createElement('button');
-        btn.textContent = '删除';
-        btn.style.marginLeft = '10px';
-        btn.onclick = () => deleteBook(b.id);
-        li.appendChild(btn);
+
+        const info = document.createElement('span');
+        info.textContent = `${b.title} — ${b.author}（可借 ${b.available} / 共 ${b.total}）`;
+
+        const addCopyBtn = document.createElement('button');
+        addCopyBtn.textContent = '加副本';
+        addCopyBtn.style.marginLeft = '10px';
+        addCopyBtn.onclick = () => addCopy(b.id);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '删除';
+        deleteBtn.style.marginLeft = '5px';
+        deleteBtn.onclick = () => deleteBook(b.id);
+
+        li.appendChild(info);
+        li.appendChild(addCopyBtn);
+        li.appendChild(deleteBtn);
 
         ul.appendChild(li);
       });
     });
 }
 
-async function deleteBook(id) {
-  if (!confirm('确定删除这本书吗？')) return;
+document.getElementById('addForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
 
+  await fetch('http://localhost:3000/api/books', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      isbn: document.getElementById('isbn').value,
+      title: document.getElementById('title').value,
+      author: document.getElementById('author').value,
+    }),
+  });
+
+  document.getElementById('isbn').value = '';
+  document.getElementById('title').value = '';
+  document.getElementById('author').value = '';
+  loadBooks();
+});
+
+
+async function addCopy(bookId) {
+  await fetch(`http://localhost:3000/api/books/${bookId}/copies`, {
+    method: 'POST',
+  });
+  loadBooks();
+}
+
+async function deleteBook(id) {
+  if (!confirm('确定删除这本书吗？所有副本会一起删除。')) return;
   await fetch('http://localhost:3000/api/books/' + id, {
     method: 'DELETE',
   });
-
   loadBooks();
 }
+
 
 
 async function editBook(book) {
