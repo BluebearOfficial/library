@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>图书馆</title>
+</head>
+<body>
+  <h1>图书馆藏书</h1>
+  <ul id="list">加载中…</ul>
+
+  <h2>添加书籍</h2>
+<form id="addForm">
+  <input id="title" placeholder="书名" required />
+  <input id="author" placeholder="作者" required />
+  <button type="submit">添加</button>
+</form>
+
+  <script>
+function loadBooks() {
+  fetch('http://localhost:3000/api/books')
+    .then(r => r.json())
+    .then(d => {
+      const ul = document.getElementById('list');
+      ul.innerHTML = '';
+
+      d.books.forEach(b => {
+        const li = document.createElement('li');
+        li.textContent = `${b.title} — ${b.author} ${b.borrowed ? '（已借出）' : ''}`;
+const editBtn = document.createElement('button');
+editBtn.textContent = '编辑';
+editBtn.style.marginLeft = '5px';
+editBtn.onclick = () => editBook(b);
+li.appendChild(editBtn);
+        const btn = document.createElement('button');
+        btn.textContent = '删除';
+        btn.style.marginLeft = '10px';
+        btn.onclick = () => deleteBook(b.id);
+        li.appendChild(btn);
+
+        ul.appendChild(li);
+      });
+    });
+}
+
+async function deleteBook(id) {
+  if (!confirm('确定删除这本书吗？')) return;
+
+  await fetch('http://localhost:3000/api/books/' + id, {
+    method: 'DELETE',
+  });
+
+  loadBooks();
+}
+
+
+async function editBook(book) {
+  const newTitle = prompt('书名：', book.title);
+  if (newTitle === null) return;   // 点了取消
+
+  const newAuthor = prompt('作者：', book.author);
+  if (newAuthor === null) return;
+
+  await fetch('http://localhost:3000/api/books/' + book.id, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: newTitle, author: newAuthor }),
+  });
+
+  loadBooks();
+}
+
+loadBooks();  // 页面打开时加载
+
+
+      document.getElementById('addForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  const title = document.getElementById('title').value;
+  const author = document.getElementById('author').value;
+
+  await fetch('http://localhost:3000/api/books', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, author }),
+  });
+
+  // 清空输入框
+  document.getElementById('title').value = '';
+  document.getElementById('author').value = '';
+
+  // 刷新列表
+  loadBooks();
+});
+  </script>
+</body>
+</html>

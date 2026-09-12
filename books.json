@@ -1,0 +1,34 @@
+{
+  "books": [
+    {
+      "id": 1,
+      "title": "三体",
+      "author": "刘慈欣",
+      "borrowed": false
+    },
+    {
+      "id": 2,
+      "title": "活着",
+      "author": "余华",
+      "borrowed": true
+    },
+    {
+      "id": 3,
+      "title": "小王子",
+      "author": "圣埃克苏佩里",
+      "borrowed": false
+    },
+    {
+      "id": 6,
+      "title": "新书",
+      "author": "某人",
+      "borrowed": false
+    },
+    {
+      "id": 7,
+      "title": "书",
+      "author": "李四",
+      "borrowed": false
+    }
+  ]
+}
